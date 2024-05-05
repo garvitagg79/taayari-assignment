@@ -1,20 +1,54 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useState, useEffect } from "react";
+import { View, ActivityIndicator } from "react-native";
+import Home from "./Home";
 
-export default function App() {
+//sql
+import { SQLiteProvider } from "expo-sqlite/next";
+import * as FileSystem from "expo-file-system";
+import { Asset } from "expo-asset";
+import { useSQLiteContext } from "expo-sqlite/next";
+
+//sql function
+const loadDatabase = async () => {
+  const dbName = "Questions.db";
+  const dbAsset = require("./assets/Questions.db");
+  const dbUri = Asset.fromModule(dbAsset).uri;
+
+  const dbFilePath = `${FileSystem.documentDirectory}SQLite/${dbName}`;
+
+  const fileInfo = await FileSystem.getInfoAsync(dbFilePath);
+
+  if (!fileInfo.exists) {
+    await FileSystem.makeDirectoryAsync(
+      `${FileSystem.documentDirectory}SQLite`,
+      { intermediates: true }
+    );
+    await FileSystem.downloadAsync(dbUri, dbFilePath);
+  }
+};
+
+const App = () => {
+  //sql calling
+  const [dbLoaded, setDbLoaded] = useState(false);
+
+  useEffect(() => {
+    loadDatabase()
+      .then(() => setDbLoaded(true))
+      .catch((e) => console.error(e));
+  }, []);
+
+  if (!dbLoaded)
+    return (
+      <View style={{ flex: 1 }}>
+        <ActivityIndicator size={"large"} />
+      </View>
+    );
+
   return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <SQLiteProvider databaseName="Questions.db">
+      <Home />
+    </SQLiteProvider>
   );
-}
+};
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+export default App;
